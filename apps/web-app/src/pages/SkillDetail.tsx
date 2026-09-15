@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useParams, Link } from 'react-router';
 import { SkillStarButton } from '../components/SkillStarButton';
 import { Icon } from '../components/ui/Icon';
@@ -91,6 +91,8 @@ export function SkillDetail(): React.ReactElement {
   const [contentLoading, setContentLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [copiedFull, setCopiedFull] = useState(false);
+  const copyResetTimerRef = useRef<number | null>(null);
+  const copyFullResetTimerRef = useRef<number | null>(null);
   const [copyError, setCopyError] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [customContext, setCustomContext] = useState('');
@@ -199,13 +201,25 @@ export function SkillDetail(): React.ReactElement {
     return () => { active = false; };
   }, [skill, contextLoading, retryToken]);
 
-  const copyText = async (text: string, markCopied: (value: boolean) => void) => {
+  const copyText = async (
+    text: string,
+    markCopied: (value: boolean) => void,
+    resetTimerRef: { current: number | null },
+  ) => {
     setCopyError('');
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
     markCopied(false);
     try {
       await navigator.clipboard.writeText(text);
+      if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current);
       markCopied(true);
-      setTimeout(() => markCopied(false), 2000);
+      resetTimerRef.current = window.setTimeout(() => {
+        resetTimerRef.current = null;
+        markCopied(false);
+      }, 2000);
     } catch {
       setCopyError('Clipboard unavailable. Select and copy the text directly from this page.');
     }
@@ -219,7 +233,7 @@ export function SkillDetail(): React.ReactElement {
       ? `${basePrompt}\n\nContext:\n${customContext}`
       : basePrompt;
 
-    void copyText(finalPrompt, setCopied);
+    void copyText(finalPrompt, setCopied, copyResetTimerRef);
   };
 
   const copyFullToClipboard = () => {
@@ -227,7 +241,7 @@ export function SkillDetail(): React.ReactElement {
       ? `${content}\n\nContext:\n${customContext}`
       : content;
 
-    void copyText(finalPrompt, setCopiedFull);
+    void copyText(finalPrompt, setCopiedFull, copyFullResetTimerRef);
   };
 
   if (!contextLoading && !skill) {

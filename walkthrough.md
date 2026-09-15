@@ -1,3 +1,9 @@
+# Skill detail copy feedback timer reset — 2026-09-15
+
+- Reproduced overlapping copy-feedback timers that let an older click clear a newer `Copied!` state early.
+- Keep independent reset timers for `Copy @Skill` and `Copy Full Content`, canceling stale resets before starting a fresh two-second feedback window.
+- Added a focused `SkillDetail` regression that performs two copies one second apart and verifies feedback remains visible for two seconds after the latest copy.
+
 # Full Snyk group reconciliation — 2026-09-06
 
 - Exported all 551 analytics rows and read all live project/issue records; distinguished stale CLI snapshots, mirror copies, and current findings.

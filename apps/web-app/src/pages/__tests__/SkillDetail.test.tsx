@@ -289,6 +289,32 @@ describe('SkillDetail', () => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Use @click-test');
     });
 
+    it('keeps copied feedback visible for two seconds after the latest copy', async () => {
+      const skill = createMockSkill({ id: 'repeat-copy', name: 'repeat-copy' });
+      (useSkills as Mock).mockReturnValue({ skills: [skill], stars: {}, loading: false });
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, text: async () => '# Copyable content' });
+      renderWithRouter(<SkillDetail />, { route: '/skill/repeat-copy', path: '/skill/:id', useProvider: false });
+      const copy = await screen.findByRole('button', { name: /Copy @Skill/i });
+
+      vi.useFakeTimers();
+      try {
+        await act(async () => { fireEvent.click(copy); });
+        expect(copy).toHaveTextContent('Copied!');
+
+        act(() => { vi.advanceTimersByTime(1000); });
+        await act(async () => { fireEvent.click(copy); });
+        expect(copy).toHaveTextContent('Copied!');
+
+        act(() => { vi.advanceTimersByTime(1001); });
+        expect(copy).toHaveTextContent('Copied!');
+
+        act(() => { vi.advanceTimersByTime(999); });
+        expect(copy).toHaveTextContent('Copy @Skill');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it.each(['Copy @Skill', 'Copy Full Content'])('reports a failed %s without claiming success', async (button) => {
       const skill = createMockSkill({ id: 'clipboard-failure', name: 'clipboard-failure' });
       (useSkills as Mock).mockReturnValue({ skills: [skill], stars: {}, loading: false });
